@@ -1,162 +1,208 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tomar y subir foto — Preview + Webhook</title>
-  <style>
-    :root{--bg:#f7f7fb;--card:#ffffff;--accent:#0066cc;--muted:#6b7280}
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
-    body{background:linear-gradient(180deg,var(--bg),#eef2ff);display:flex;align-items:center;justify-content:center;padding:20px}
-    .card{width:100%;max-width:520px;background:var(--card);border-radius:14px;box-shadow:0 8px 30px rgba(2,6,23,0.08);padding:18px}
-    h1{font-size:18px;margin:0 0 10px}
-    p.lead{margin:0 0 14px;color:var(--muted);font-size:14px}
-
-    .preview-wrap{display:grid;gap:10px}
-    .preview{height:320px;border-radius:10px;background:linear-gradient(180deg,#e9eefb,#fff);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px dashed #e1e7ff}
-    .preview img{width:100%;height:100%;object-fit:cover}
-
-    .controls{display:flex;gap:8px;margin-top:10px}
-    button, label.file-btn{appearance:none;border:0;padding:10px 12px;border-radius:10px;font-weight:600;cursor:pointer}
-    .primary{background:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(3,102,214,0.18)}
-    .ghost{background:transparent;border:1px solid #e6e9f8;color:var(--accent)}
-    .danger{background:#ef4444;color:#fff}
-
-    .file-input{display:none}
-
-    .info{margin-top:12px;font-size:13px;color:var(--muted)}
-    .status{margin-top:12px;font-size:14px}
-
-    @media (max-width:420px){.preview{height:260px}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Captura de Tickets – Demo</title>
+<style>
+  :root { --bg:#0f1115; --fg:#eaeef5; --muted:#a9b2c3; --accent:#6ad3ff; --ok:#30d158; --warn:#ffd60a; --err:#ff453a; }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 20px 32px}
+  h1{font-size:1.25rem;margin:8px 0 2px}
+  p.sub{color:var(--muted);margin:0 0 16px}
+  .card{background:#151823;border:1px solid #1f2431;border-radius:12px;padding:16px;margin:12px 0}
+  label{display:block;margin:10px 0 6px;color:var(--muted)}
+  input,textarea,button,select{
+    width:100%;box-sizing:border-box;background:#0f121a;color:var(--fg);
+    border:1px solid #2a3040;border-radius:10px;padding:12px;outline:none
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  textarea{min-height:72px;resize:vertical}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > *{flex:1 1 200px}
+  .preview{
+    width:100%;aspect-ratio:3/4;background:#0b0e14;border:1px dashed #2a3040;border-radius:12px;
+    display:grid;place-items:center;overflow:hidden;margin-top:8px
+  }
+  .preview img{width:100%;height:100%;object-fit:cover}
+  .hint{font-size:.9rem;color:var(--muted)}
+  .status{margin-top:12px;padding:10px;border-radius:10px;border:1px solid #283044;background:#0d1220}
+  .status.ok{border-color:#234d2e;background:#0f1a12;color:var(--ok)}
+  .status.warn{border-color:#4d4623;background:#1a170f;color:var(--warn)}
+  .status.err{border-color:#4d2323;background:#1a0f0f;color:var(--err)}
+  .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .btn{background:#1b2130;border:1px solid #2a3040;border-radius:10px;padding:12px 14px;cursor:pointer}
+  .btn.primary{background:linear-gradient(180deg,#1e2a40,#162036);border-color:#2a3040}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .small{font-size:.85rem;color:var(--muted)}
+  footer{margin-top:18px;color:var(--muted);font-size:.85rem}
+</style>
 </head>
 <body>
+<div class="wrap">
+  <h1>Captura de Tickets</h1>
+  <p class="sub">Toma una foto, revisa la vista previa y envíala al Webhook de Make.</p>
+
   <div class="card">
-    <h1>Tomar / Subir foto y enviar al webhook</h1>
-    <p class="lead">Usa la cámara del móvil o sube una imagen. Verás un preview y podrás enviar la foto a tu webhook de Make.</p>
-
-    <div class="preview-wrap">
-      <div class="preview" id="preview">
-        <div id="placeholder">
-          <svg width="110" height="110" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M3 7a2 2 0 0 1 2-2h3l2-2h4l2 2h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" stroke="#cbd5e1" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-            <circle cx="12" cy="13" r="3" stroke="#cbd5e1" stroke-width="1.2"></circle>
-          </svg>
-          <div style="color:var(--muted);margin-top:8px">Sin imagen seleccionada</div>
-        </div>
-        <img id="previewImg" style="display:none" alt="Preview" />
+    <div class="row">
+      <div>
+        <label for="store">Caja / Punto</label>
+        <input id="store" placeholder="Caja 01" />
       </div>
-
-      <div class="controls">
-        <!-- input file con capture para forzar cámara en móviles -->
-        <label class="file-btn primary" for="fileInput">📷 Tomar / Elegir</label>
-        <input id="fileInput" class="file-input" type="file" accept="image/*" capture="environment">
-
-        <button id="uploadBtn" class="ghost" disabled>⬆️ Subir</button>
-        <button id="resetBtn" class="danger" style="display:none">🗑️ Quitar</button>
+      <div>
+        <label for="cashier">Cajero/a</label>
+        <input id="cashier" placeholder="Harvey" />
       </div>
-
-      <div class="info">Consejo: en móviles la opción 'Tomar' abrirá la cámara si el navegador la soporta. Reemplaza <code>WEBHOOK_URL</code> en el código por tu URL de Make.</div>
-      <div class="status" id="status"></div>
     </div>
+
+    <label for="ticket">Foto del ticket</label>
+    <input id="ticket" type="file" accept="image/*" capture="environment" />
+    <div class="preview" id="preview">
+      <span class="hint">La vista previa aparecerá aquí</span>
+    </div>
+
+    <label for="notes">Notas (opcional)</label>
+    <textarea id="notes" placeholder="Luz baja, ticket arrugado, etc."></textarea>
+
+    <div class="hint small">Consejo: llena el encuadre, evita sombras duras y mantén el ticket plano.</div>
+
+    <div class="actions">
+      <button id="retake" class="btn" type="button" disabled>Retomar</button>
+      <button id="send" class="btn primary" type="button" disabled>Enviar a Make</button>
+    </div>
+
+    <div id="status" class="status">Esperando captura…</div>
   </div>
 
-  <script>
-    // Reemplaza este valor por tu webhook de Make (no dejes espacios)
-    const WEBHOOK_URL = 'https://hook.us2.make.com/3yhomk0gvb2yxv9fkmz7ek853d3ppqx0';
+  <footer>
+    Este demo comprime la imagen a JPG y la envía como <strong>multipart/form-data</strong> al Webhook de Make.
+  </footer>
+</div>
 
-    const fileInput = document.getElementById('fileInput');
-    const previewImg = document.getElementById('previewImg');
-    const placeholder = document.getElementById('placeholder');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const status = document.getElementById('status');
+<script>
+/* ====== CONFIGURA AQUÍ TU WEBHOOK DE MAKE ====== */
+const WEBHOOK_URL = "https://hook.us2.make.com/3yhomk0gvb2yxv9fkmz7ek853d3ppqx0"; // ← pega aquí tu URL del módulo "Custom webhook" de Make
+/* =============================================== */
 
-    let currentFile = null;
+const el = sel => document.querySelector(sel);
+const ticketInput = el('#ticket');
+const preview = el('#preview');
+const sendBtn = el('#send');
+const retakeBtn = el('#retake');
+const statusBox = el('#status');
 
-    function resetPreview(){
-      currentFile = null;
-      previewImg.src = '';
-      previewImg.style.display = 'none';
-      placeholder.style.display = 'block';
-      uploadBtn.disabled = true;
-      resetBtn.style.display = 'none';
-      status.textContent = '';
+let originalFile = null;
+let compressedBlob = null;
+
+function fileToImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressImage(file, maxSide=1600, quality=0.8){
+  const img = await fileToImage(file);
+  const {naturalWidth:w, naturalHeight:h} = img;
+  let newW = w, newH = h;
+  if (Math.max(w,h) > maxSide){
+    const scale = maxSide / Math.max(w,h);
+    newW = Math.round(w * scale);
+    newH = Math.round(h * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = newW; canvas.height = newH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, newW, newH);
+  return new Promise(resolve=>{
+    canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+  });
+}
+
+function showPreview(objURL){
+  preview.innerHTML = '';
+  const img = document.createElement('img');
+  img.alt = 'Vista previa del ticket';
+  img.src = objURL;
+  preview.appendChild(img);
+}
+
+function setStatus(msg, type=''){
+  statusBox.textContent = msg;
+  statusBox.className = 'status ' + (type||'');
+}
+
+ticketInput.addEventListener('change', async (ev)=>{
+  const file = ev.target.files && ev.target.files[0];
+  if(!file){ return; }
+  originalFile = file;
+  setStatus('Procesando imagen… (compresión y vista previa)');
+  try{
+    compressedBlob = await compressImage(file, 1600, 0.8);
+    const objURL = URL.createObjectURL(compressedBlob);
+    showPreview(objURL);
+    sendBtn.disabled = false;
+    retakeBtn.disabled = false;
+    setStatus(`Listo para enviar. Tamaño comprimido: ${(compressedBlob.size/1024).toFixed(0)} KB`);
+  }catch(err){
+    console.error(err);
+    setStatus('No se pudo procesar la imagen. Intenta de nuevo.', 'err');
+  }
+});
+
+retakeBtn.addEventListener('click', ()=>{
+  ticketInput.value = '';
+  originalFile = null;
+  compressedBlob = null;
+  preview.innerHTML = '<span class="hint">La vista previa aparecerá aquí</span>';
+  sendBtn.disabled = true;
+  retakeBtn.disabled = true;
+  setStatus('Esperando captura…');
+});
+
+sendBtn.addEventListener('click', async ()=>{
+  if(!compressedBlob){ setStatus('No hay imagen para enviar.', 'warn'); return; }
+  const store = el('#store').value.trim();
+  const cashier = el('#cashier').value.trim();
+  const notes = el('#notes').value.trim();
+  setStatus('Enviando al Webhook de Make…');
+  sendBtn.disabled = true;
+  try{
+    const form = new FormData();
+    const fileName = `ticket_${new Date().toISOString().replace(/[:.]/g,'-')}.jpg`;
+    form.append('ticket_image', compressedBlob, fileName);
+    form.append('store', store);
+    form.append('cashier', cashier);
+    form.append('notes', notes);
+    form.append('client_ts', new Date().toISOString());
+    form.append('original_size_bytes', originalFile ? originalFile.size : 0);
+    form.append('compressed_size_bytes', compressedBlob.size);
+    const res = await fetch(WEBHOOK_URL, { method:'POST', body: form });
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      throw new Error(`HTTP ${res.status} – ${t.slice(0,200)}`);
     }
-
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return resetPreview();
-
-      // Optional: limit file size (e.g., 5MB)
-      const MAX_MB = 5;
-      if (file.size > MAX_MB * 1024 * 1024) {
-        status.textContent = `La imagen excede ${MAX_MB} MB. Elige otra.`;
-        fileInput.value = '';
-        return;
-      }
-
-      currentFile = file;
-      const objectUrl = URL.createObjectURL(file);
-      previewImg.src = objectUrl;
-      previewImg.onload = () => URL.revokeObjectURL(objectUrl);
-      previewImg.style.display = 'block';
-      placeholder.style.display = 'none';
-      uploadBtn.disabled = false;
-      resetBtn.style.display = 'inline-block';
-      status.textContent = `Archivo listo: ${file.name} (${Math.round(file.size/1024)} KB)`;
-    });
-
-    resetBtn.addEventListener('click', () => {
-      fileInput.value = '';
-      resetPreview();
-    });
-
-    uploadBtn.addEventListener('click', async () => {
-      if (!currentFile) return;
-      if (!WEBHOOK_URL || WEBHOOK_URL.includes('REEMPLAZA_POR_TU_WEBHOOK')){
-        status.textContent = '✋ Reemplaza WEBHOOK_URL en el código con tu URL de Make antes de subir.';
-        return;
-      }
-
-      uploadBtn.disabled = true;
-      uploadBtn.textContent = 'Subiendo...';
-      status.textContent = '';
-
-      try {
-        const form = new FormData();
-        // Nombre único con timestamp
-        const filename = `${Date.now()}_${currentFile.name}`;
-        form.append('file', currentFile, filename);
-        // añade metadatos si quieres
-        form.append('uploaded_at', new Date().toISOString());
-        form.append('source', 'web-mobile-upload');
-
-        // Hacemos POST directo al webhook de Make
-        const resp = await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          body: form
-          // Nota: Make acepta multipart/form-data por defecto en la mayoría de los escenarios.
-        });
-
-        if (!resp.ok) throw new Error(`Respuesta no OK: ${resp.status}`);
-
-        // Si Make devuelve json o texto, puedes leerlo
-        let text = await resp.text();
-        status.textContent = '✅ Subida exitosa';
-        console.log('Respuesta webhook:', text);
-      } catch (err) {
-        console.error(err);
-        status.textContent = `❌ Error al subir: ${err.message}`;
-      } finally {
-        uploadBtn.disabled = false;
-        uploadBtn.textContent = '⬆️ Subir';
-      }
-    });
-
-    // estado inicial
-    resetPreview();
-  </script>
+    setStatus('✅ Enviado correctamente. Puedes capturar otro ticket.', 'ok');
+    ticketInput.value = '';
+    originalFile = null;
+    compressedBlob = null;
+    preview.innerHTML = '<span class="hint">La vista previa aparecerá aquí</span>';
+    sendBtn.disabled = true;
+    retakeBtn.disabled = true;
+  }catch(err){
+    console.error(err);
+    setStatus('❌ Error al enviar: ' + err.message, 'err');
+    sendBtn.disabled = false;
+  }
+});
+</script>
 </body>
 </html>
